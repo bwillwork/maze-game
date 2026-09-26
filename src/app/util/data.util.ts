@@ -1,4 +1,9 @@
+import {Game, Setup} from '../types/data.types';
 
-export function initSetupData() {}
+export function initSetupData(): Setup {
+  return {};
+}
 
-export function initGameData() {}
+export function initGameData(): Game {
+  return {};
+}

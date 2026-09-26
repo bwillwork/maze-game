@@ -1,3 +1,10 @@
 
-export type Setup = {};
-export type Game = {};
+export type Setup = {
+
+};
+
+export type Game = {
+  maxTime: number,
+  total: number,
+  score: number
+};
