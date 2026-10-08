@@ -7,13 +7,13 @@ const initialState: SetUp = initSetupData();
 
 export const setupReducer = createReducer(
   initialState,
-  on(SetUpActions.resetSetup, (state) => {
-    return { ...state };
+  on(SetUpActions.resetSetup, () => {
+    return { ...initSetupData() };
   }),
-  on(SetUpActions.setSize, (state) => {
-    return { ...state };
+  on(SetUpActions.setSize, (state,{size}) => {
+    return { ...state,size };
   }),
-  on(SetUpActions.setTimeLimit, (state) => {
-    return { ...state };
+  on(SetUpActions.setTimeLimit, (state,{timeLimit}) => {
+    return { ...state,timeLimit };
   }),
 );

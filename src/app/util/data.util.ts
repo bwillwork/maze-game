@@ -4,7 +4,7 @@ import { SmallMaze } from '../types/maze.types';
 export function initSetupData(): SetUp {
   return {
     size: SmallMaze,
-    time: NoTimeLimit,
+    timeLimit: NoTimeLimit,
   };
 }
 

@@ -11,7 +11,7 @@ export const ChallengingTimeLimit: TimeLimit = 10;
 export const HardTimeLimit:TimeLimit = 5;
 
 export type SetUp = {
-  time: TimeLimit,
+  timeLimit: TimeLimit,
   size: MazeSize,
 };
 
