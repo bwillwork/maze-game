@@ -7,8 +7,10 @@ export type SetupActionsType = {
 
 export type GameActionsType = {
   setupGame: string,
+  countDown: string,
   updateScore: string,
-  resetScore: string,
+  updateState: string,
+  resetGame: string,
 };
 
 

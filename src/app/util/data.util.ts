@@ -1,15 +1,13 @@
-import {Game, Setup} from '../types/data.types';
+import { Game, NoTimeLimit, SetUp } from '../types/data.types';
+import { SmallMaze } from '../types/maze.types';
 
-export function initSetupData(): Setup {
+export function initSetupData(): SetUp {
   return {
-    size: {
-      width: 0,
-      height: 0,
-    },
-    time: 0,
+    size: SmallMaze,
+    time: NoTimeLimit,
   };
 }
 
 export function initGameData(): Game {
-  return { timer: 0, score: 0, total: 0, state: "Needs Setup" };
+  return { timer: 0, score: 0, total: 0, gameState: "Needs Setup" };
 }
