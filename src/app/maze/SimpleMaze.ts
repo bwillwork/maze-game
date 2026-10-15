@@ -3,6 +3,10 @@ import { MazeSize } from '../types/maze.types';
 export interface Node<D> {
   getData(): D | undefined;
   setData(data: D): void;
+  isRoot(): boolean;
+  setRoot(isRoot: boolean): void;
+  isLeaf(): boolean;
+  setLeaf(isLeaf: boolean): void;
 }
 
 export interface Cell {
@@ -30,11 +34,25 @@ export class MazeCell<D> implements Node<D>, Cell, Equals<MazeCell<D>> {
   private readonly row: number;
   private readonly column: number;
   private visited: boolean = false;
+  private root: boolean = false;
+  private leaf: boolean = false;
   private data: D | undefined;
 
   constructor(row: number, column: number) {
     this.row = row;
     this.column = column;
+  }
+  isRoot(): boolean {
+    return this.root;
+  }
+  setRoot(isRoot: boolean): void {
+    this.root = isRoot;
+  }
+  isLeaf(): boolean {
+    return this.leaf;
+  }
+  setLeaf(isLeaf: boolean): void {
+    this.leaf = isLeaf;
   }
   equals(other: MazeCell<D>): boolean {
     return this.row === other.getRow() && this.column === other.getColumn();
@@ -95,30 +113,71 @@ export class MazeWall<D> implements Edge<D, MazeCell<D>>, Path, Equals<MazeWall<
   }
 }
 
-export class Maze<D> {
+export interface Maze<D> {
+
+}
+
+export class SimpleMaze<D> implements Maze<D> {
   private grid: Array<Array<MazeCell<D>>> = [];
 
   private nodes: Array<MazeCell<D>> = [];
   private edges: Array<MazeWall<D>> = [];
+  private paths: Array<MazeWall<D>>;
 
   private readonly size: MazeSize;
 
   constructor(size: MazeSize) {
     this.size = size;
-    for(let r = 0; r < size.height; ++r) {
+    for (let r = 0; r < size.height; ++r) {
       const row: Array<MazeCell<D>> = [];
       for (let c = 0; c < size.width; ++c) {
-
-        const cell = new MazeCell<D>(r,c);
+        const cell = new MazeCell<D>(r, c);
         row.push(cell);
         this.nodes.push(cell);
 
-        if(r > 0) this.edges.push(new MazeWall<D>(this.grid[r - 1][c],cell));
-        if(c > 0) this.edges.push(new MazeWall<D>(this.grid[r][c - 1], cell));
+        if (r > 0) this.edges.push(new MazeWall<D>(this.grid[r - 1][c], cell));
+        if (c > 0) this.edges.push(new MazeWall<D>(this.grid[r][c - 1], cell));
       }
       this.grid.push(row);
     }
+
+    this.randomize();
+
+    this.paths = this.edges.filter(e => e.isPath());
   }
 
+  private randomize() {
+    const index = this.getRandomIndex(this.nodes);
+    this.nodes[index].setRoot(true);
+    this.backtrack(this.nodes[index]);
+  }
 
+  private backtrack(cell: MazeCell<D>) {
+    cell.setVisited(true);
+    let unvisitedNeighbors = this.unvisitedNeighbors(cell);
+    if (unvisitedNeighbors.length === 0) cell.setLeaf(true);
+    while (unvisitedNeighbors.length > 0) {
+      const randIndex = this.getRandomIndex(unvisitedNeighbors);
+      const nextCell = unvisitedNeighbors[randIndex];
+      this.createPath(cell, nextCell);
+      unvisitedNeighbors = this.unvisitedNeighbors(cell);
+    }
+  }
+
+  private unvisitedNeighbors(cell: MazeCell<D>): Array<MazeCell<D>> {
+    return this.edges
+      .filter((e) => e.getA().equals(cell) || e.getB().equals(cell))
+      .map((e) => (e.getA().equals(cell) ? e.getB() : e.getA()))
+      .filter((c) => !c.hasVisited());
+  }
+
+  private getRandomIndex<T>(array: Array<T>): number {
+    return Math.floor(Math.random() * array.length);
+  }
+
+  private createPath(a: MazeCell<D>, b: MazeCell<D>) {
+    const temp = new MazeWall<D>(a, b);
+    const index: number = this.edges.findIndex((e) => e.equals(temp));
+    if (index !== -1) this.edges[index].setPath(true);
+  }
 }
