@@ -1,3 +1,4 @@
+import { Game, SetUp } from './data.types';
 
 export type SetupActionsType = {
   setTimeLimit: string,
@@ -13,4 +14,7 @@ export type GameActionsType = {
   resetGame: string,
 };
 
-
+export interface AppState {
+  setup: SetUp,
+  game: Game
+}

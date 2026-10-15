@@ -1,9 +1,12 @@
 import { Component, inject, OnDestroy } from '@angular/core';
 import { FormBuilder, FormSubmittedEvent, ReactiveFormsModule, Validators } from '@angular/forms';
-import { TimeLimitOptionKeys, TimeLimitOptions } from '../../types/data.types';
+import { TimeLimitOptions } from '../../types/data.types';
 import { MazeSizeOptions } from '../../types/maze.types';
 import { Subscription } from 'rxjs';
 import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
+import { setupGame } from '../../data/actions/game.actions';
+import { setSize, setTimeLimit } from '../../data/actions/setup.actions';
 
 @Component({
   imports: [ReactiveFormsModule],
@@ -14,10 +17,11 @@ import { Router } from '@angular/router';
 export class SetupPage implements OnDestroy {
   private fb: FormBuilder = inject(FormBuilder);
   private router = inject(Router);
+  private store: Store = inject(Store);
   private readonly subs: Array<Subscription> = [];
 
   setupForm = this.fb.group({
-    timeLimit: [0, Validators.required],
+    timeLimit: [-1, Validators.required],
     size: ['', Validators.required],
   });
 
@@ -36,9 +40,9 @@ export class SetupPage implements OnDestroy {
             const timeLimitValue = this.timeLimitOptions[timeLimit];
             const sizeValue = this.mazeSizeOptions[size];
             console.log('Yo! ', timeLimitValue, sizeValue);
-
-            this.router.navigate(['/game',{timeLimit: timeLimitValue,size: sizeValue}]);
-
+            this.store.dispatch(setTimeLimit({timeLimit: timeLimitValue}));
+            this.store.dispatch(setSize({size: sizeValue}));
+            this.router.navigate(['/game']);
           }
         }
       }),
