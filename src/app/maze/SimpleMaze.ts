@@ -2,7 +2,7 @@ import { MazeSize } from '../types/maze.types';
 
 export interface Node<D> {
   getData(): D | undefined;
-  setData(data: D): void;
+  setData(data: D | undefined): void;
   isRoot(): boolean;
   setRoot(isRoot: boolean): void;
   isLeaf(): boolean;
@@ -74,7 +74,7 @@ export class MazeCell<D> implements Node<D>, Cell, Equals<MazeCell<D>> {
   getData(): D | undefined {
     return this.data;
   }
-  setData(data: D): void {
+  setData(data: D | undefined): void {
     this.data = data;
   }
 }
@@ -113,7 +113,20 @@ export class MazeWall<D> implements Edge<D, MazeCell<D>>, Path, Equals<MazeWall<
   }
 }
 
+export interface MazeElement {
+  isCharacter(): boolean;
+  isGoal(): boolean;
+}
+
 export interface Maze<D> {
+  getGrid(): Array<Array<MazeCell<D>>>;
+  getPaths(): Array<MazeWall<D>>;
+
+  placeData(data:D, row: number, column: number): void;
+  moveData(from: MazeCell<D>, to: MazeCell<D>): boolean;
+
+  getFilledCells(): Array<MazeCell<D>>;
+  getWalkedPath(): Array<MazeCell<D>>;
 
 }
 
@@ -122,7 +135,7 @@ export class SimpleMaze<D> implements Maze<D> {
 
   private nodes: Array<MazeCell<D>> = [];
   private edges: Array<MazeWall<D>> = [];
-  private paths: Array<MazeWall<D>>;
+  private walkedPaths: Array<MazeWall<D>> = [];
 
   private readonly size: MazeSize;
 
@@ -142,8 +155,6 @@ export class SimpleMaze<D> implements Maze<D> {
     }
 
     this.randomize();
-
-    this.paths = this.edges.filter(e => e.isPath());
   }
 
   private randomize() {
@@ -179,5 +190,39 @@ export class SimpleMaze<D> implements Maze<D> {
     const temp = new MazeWall<D>(a, b);
     const index: number = this.edges.findIndex((e) => e.equals(temp));
     if (index !== -1) this.edges[index].setPath(true);
+  }
+
+  getFilledCells(): Array<MazeCell<D>> {
+    return this.nodes.filter(n => n.getData());
+  }
+
+  getGrid(): Array<Array<MazeCell<D>>> {
+    return this.grid;
+  }
+
+  getPaths(): Array<MazeWall<D>> {
+    return this.edges.filter((e) => e.isPath());
+  }
+
+  getWalkedPath(): Array<MazeCell<D>> {
+    return [];
+  }
+
+  moveData(from: MazeCell<D>, to: MazeCell<D>): boolean {
+    const temp = new MazeWall<D>(from,to);
+    const hasPath = this.getPaths().findIndex((p) => p.equals(temp)) !== -1;
+    if(hasPath) {
+      const data = from.getData();
+      if(data) {
+        // TODO: handle the case when there is an other element in the target cell
+        to.setData(data);
+        from.setData(undefined);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  placeData(data: D, row: number, column: number): void {
   }
 }
