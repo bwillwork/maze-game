@@ -1,4 +1,5 @@
 import { MazeSize } from '../types/maze.types';
+import { from } from 'rxjs';
 
 export interface Node<D> {
   getData(): D | undefined;
@@ -121,6 +122,7 @@ export interface MazeElement {
 export interface Maze<D> {
   getGrid(): Array<Array<MazeCell<D>>>;
   getPaths(): Array<MazeWall<D>>;
+  getData(row: number, column: number): D | undefined;
 
   placeData(data:D, row: number, column: number): void;
   moveData(from: MazeCell<D>, to: MazeCell<D>): boolean;
@@ -216,7 +218,7 @@ export class SimpleMaze<D> implements Maze<D> {
       if(data) {
         // TODO: handle the case when there is an other element in the target cell
         to.setData(data);
-        from.setData(undefined);
+        from.setData(undefined);// Clear old data
         return true;
       }
     }
@@ -224,5 +226,14 @@ export class SimpleMaze<D> implements Maze<D> {
   }
 
   placeData(data: D, row: number, column: number): void {
+    if (row < 0 && row >= this.grid.length) return;
+    if (column < 0 && column >= this.grid[row].length) return;
+    this.grid[row][column].setData(data);
+  }
+
+  getData(row: number, column: number): D | undefined {
+    if(row < 0 && row >= this.grid.length) return undefined;
+    if(column < 0 && column >= this.grid[row].length) return undefined;
+    return this.grid[row][column].getData();
   }
 }
