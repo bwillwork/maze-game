@@ -1,6 +1,20 @@
 <h1>Set Up</h1>
 <form [formGroup]="setupForm">
   <div class="form-control">
-
+    <label for="time-limit-options"></label>
+    <select id="time-limit-options" formControlName="timeLimit">
+      @for (key of timeLimitOptionKeys; track $index) {
+        <option [value]="key">{{key}}</option>
+      }
+    </select>
   </div>
+  <div class="form-control">
+    <label for="maze-size-options">Maze Size</label>
+    <select id="maze-size-options" formControlName="size">
+      @for (key of mazeSizeOptionKeys; track $index) {
+        <option [value]="key">{{key}}</option>
+      }
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary">Submit</button>
 </form>
