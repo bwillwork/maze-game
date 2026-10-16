@@ -114,15 +114,44 @@ export class MazeWall<D> implements Edge<D, MazeCell<D>>, Path, Equals<MazeWall<
   }
 }
 
-export interface MazeElement {
+export interface MazeElement extends Equals<MazeElement> {
   isCharacter(): boolean;
   isGoal(): boolean;
 }
 
-export interface Maze<D> {
+export class Character implements MazeElement {
+  equals(other: MazeElement): boolean {
+    return this.isCharacter() === other.isCharacter() && this.isGoal() === other.isGoal();
+  }
+  isCharacter(): boolean {
+    return true;
+  }
+
+  isGoal(): boolean {
+    return false;
+  }
+}
+
+export class Goal implements MazeElement {
+  isCharacter(): boolean {
+    return false;
+  }
+
+  isGoal(): boolean {
+    return true;
+  }
+
+  equals(other: MazeElement): boolean {
+    return this.isCharacter() === other.isCharacter() && this.isGoal() === other.isGoal();
+  }
+}
+
+
+export interface Maze<D extends Equals<D>> {
   getGrid(): Array<Array<MazeCell<D>>>;
   getPaths(): Array<MazeWall<D>>;
   getData(row: number, column: number): D | undefined;
+  find(data: D): MazeCell<D> | undefined;
 
   placeData(data:D, row: number, column: number): void;
   moveData(from: MazeCell<D>, to: MazeCell<D>): boolean;
@@ -130,9 +159,12 @@ export interface Maze<D> {
   getFilledCells(): Array<MazeCell<D>>;
   getWalkedPath(): Array<MazeCell<D>>;
 
+  getRoot(): MazeCell<D> | undefined;
+  getLeaves(): Array<MazeCell<D>>;
+
 }
 
-export class SimpleMaze<D> implements Maze<D> {
+export class SimpleMaze<D extends Equals<D>> implements Maze<D> {
   private grid: Array<Array<MazeCell<D>>> = [];
 
   private nodes: Array<MazeCell<D>> = [];
@@ -151,12 +183,28 @@ export class SimpleMaze<D> implements Maze<D> {
         this.nodes.push(cell);
 
         if (r > 0) this.edges.push(new MazeWall<D>(this.grid[r - 1][c], cell));
-        if (c > 0) this.edges.push(new MazeWall<D>(this.grid[r][c - 1], cell));
+        if (c > 0) this.edges.push(new MazeWall<D>(row[c - 1], cell));
       }
       this.grid.push(row);
     }
 
+    console.log('-- Yo --');
+
     this.randomize();
+  }
+  find(data: D): MazeCell<D> | undefined {
+    for(const row of this.grid) {
+      for(const col of row) {
+        if(col.getData()?.equals(data)) return col;
+      }
+    }
+    return undefined;
+  }
+  getRoot(): MazeCell<D> | undefined {
+    return this.nodes.find((n) => n.isRoot());
+  }
+  getLeaves(): MazeCell<D>[] {
+    return this.nodes.filter((n) => n.isLeaf());
   }
 
   private randomize() {
@@ -173,6 +221,7 @@ export class SimpleMaze<D> implements Maze<D> {
       const randIndex = this.getRandomIndex(unvisitedNeighbors);
       const nextCell = unvisitedNeighbors[randIndex];
       this.createPath(cell, nextCell);
+      this.backtrack(nextCell);
       unvisitedNeighbors = this.unvisitedNeighbors(cell);
     }
   }
@@ -195,7 +244,7 @@ export class SimpleMaze<D> implements Maze<D> {
   }
 
   getFilledCells(): Array<MazeCell<D>> {
-    return this.nodes.filter(n => n.getData());
+    return this.nodes.filter((n) => n.getData());
   }
 
   getGrid(): Array<Array<MazeCell<D>>> {
@@ -211,14 +260,14 @@ export class SimpleMaze<D> implements Maze<D> {
   }
 
   moveData(from: MazeCell<D>, to: MazeCell<D>): boolean {
-    const temp = new MazeWall<D>(from,to);
+    const temp = new MazeWall<D>(from, to);
     const hasPath = this.getPaths().findIndex((p) => p.equals(temp)) !== -1;
-    if(hasPath) {
+    if (hasPath) {
       const data = from.getData();
-      if(data) {
+      if (data) {
         // TODO: handle the case when there is an other element in the target cell
         to.setData(data);
-        from.setData(undefined);// Clear old data
+        from.setData(undefined); // Clear old data
         return true;
       }
     }
@@ -232,8 +281,8 @@ export class SimpleMaze<D> implements Maze<D> {
   }
 
   getData(row: number, column: number): D | undefined {
-    if(row < 0 && row >= this.grid.length) return undefined;
-    if(column < 0 && column >= this.grid[row].length) return undefined;
+    if (row < 0 && row >= this.grid.length) return undefined;
+    if (column < 0 && column >= this.grid[row].length) return undefined;
     return this.grid[row][column].getData();
   }
 }

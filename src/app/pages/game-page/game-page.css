@@ -1,0 +1,23 @@
+div.square {
+  display: block;
+  width: 35px;
+  max-width: 35px;
+  height: 35px;
+  border: 1px solid #222;
+}
+
+div.path-t {
+  border-top: none;
+}
+
+div.path-r {
+  border-right: none;
+}
+
+div.path-b {
+  border-bottom: none;
+}
+
+div.path-l {
+  border-left: none;
+}

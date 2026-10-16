@@ -1,1 +1,23 @@
-<p>game-page works!</p>
+<div class="container">
+@for(row of grid(); track $index) {
+  <div class="row">
+  @for(col of row; track $index) {
+    <div
+      class="col square"
+      [ngClass]="{
+        'path-t': hasPathUp(col),
+        'path-r': hasPathRight(col),
+        'path-b': hasPathDown(col),
+        'path-l': hasPathLeft(col),
+      }"
+    >
+
+      @if(col.getData()?.isCharacter()) {
+        YO!
+      }
+
+    </div>
+  }
+  </div>
+}
+</div>
