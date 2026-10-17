@@ -3,7 +3,7 @@ import { Store } from '@ngrx/store';
 import { selectSetup, selectSetupState } from '../../data/selectors/setup.selectors';
 import { map, Subscription } from 'rxjs';
 import { AppState } from '../../types/redux.types';
-import { Character, Maze, MazeCell, MazeElement, SimpleMaze } from '../../maze/SimpleMaze';
+import { Character, Goal, Maze, MazeCell, MazeElement, MazeWall, SimpleMaze } from '../../maze/SimpleMaze';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NgClass } from '@angular/common';
 
@@ -18,14 +18,27 @@ export class GamePage implements OnDestroy {
   private setup$ = this.store.select(selectSetupState);
   private subs: Array<Subscription> = [];
 
-  maze = toSignal(this.setup$.pipe(map((s) => new SimpleMaze<MazeElement>(s.size))));
+  maze = toSignal(
+    this.setup$.pipe(
+      map((s) => {
+        const sm = new SimpleMaze<MazeElement>(s.size);
+        sm.getRoot()?.setData(new Character());
+
+        sm.getLeaves().forEach((l) => l.setData(new Goal()));
+
+        return sm;
+      }),
+    ),
+  );
   grid = computed(() => {
     const graph = this.maze();
     if (graph) return graph.getGrid();
     else return [[]] as Array<Array<MazeCell<MazeElement>>>;
   });
-  characterCell = computed(() => {
-    return this.maze()?.find(new Character());
+  turns = computed(() => {
+    const maze = this.maze();
+    if(maze) return maze.getCells().filter(c => c.isTurn());
+    return [] as Array<MazeCell<MazeElement>>;
   });
 
   constructor() {
@@ -59,6 +72,19 @@ export class GamePage implements OnDestroy {
   hasPathLeft(cell: MazeCell<MazeElement>): boolean {
     const maze = this.maze();
     return maze ? this.hasPath(maze, cell, cell.getRow(), cell.getColumn() - 1) : false;
+  }
+
+  hasTurn(cell: MazeCell<MazeElement>) {
+    const maze = this.maze();
+    if(maze) {
+      const cells = maze.getPaths()
+        .filter((p) => p.getA().equals(cell) || p.getB().equals(cell))
+        .map((p) => (p.getA().equals(cell) ? p.getB() : p.getA()));
+
+      return cells.length === 2 && cells[0].getRow() !== cells[1].getRow() && cells[0].getColumn() !== cells[1].getColumn();
+
+    }
+    return false;
   }
 
   private hasPath(

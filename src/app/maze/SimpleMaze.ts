@@ -8,6 +8,8 @@ export interface Node<D> {
   setRoot(isRoot: boolean): void;
   isLeaf(): boolean;
   setLeaf(isLeaf: boolean): void;
+  isTurn(): boolean;
+  setTurn(isTurn: boolean): void;
 }
 
 export interface Cell {
@@ -38,10 +40,17 @@ export class MazeCell<D> implements Node<D>, Cell, Equals<MazeCell<D>> {
   private root: boolean = false;
   private leaf: boolean = false;
   private data: D | undefined;
+  private turn: boolean = false;
 
   constructor(row: number, column: number) {
     this.row = row;
     this.column = column;
+  }
+  isTurn(): boolean {
+    return this.turn;
+  }
+  setTurn(isTurn: boolean): void {
+    this.turn = isTurn;
   }
   isRoot(): boolean {
     return this.root;
@@ -150,6 +159,7 @@ export class Goal implements MazeElement {
 export interface Maze<D extends Equals<D>> {
   getGrid(): Array<Array<MazeCell<D>>>;
   getPaths(): Array<MazeWall<D>>;
+  getCells(): Array<MazeCell<D>>;
   getData(row: number, column: number): D | undefined;
   find(data: D): MazeCell<D> | undefined;
 
@@ -169,6 +179,7 @@ export class SimpleMaze<D extends Equals<D>> implements Maze<D> {
 
   private nodes: Array<MazeCell<D>> = [];
   private edges: Array<MazeWall<D>> = [];
+  private turnPaths: Array<MazeWall<D>> = [];
   private walkedPaths: Array<MazeWall<D>> = [];
 
   private readonly size: MazeSize;
@@ -191,11 +202,17 @@ export class SimpleMaze<D extends Equals<D>> implements Maze<D> {
     console.log('-- Yo --');
 
     this.randomize();
+    this.setTurnNodes();
+    this.hydrateTurnPaths();
+
+  }
+  getCells(): MazeCell<D>[] {
+    return this.nodes;
   }
   find(data: D): MazeCell<D> | undefined {
-    for(const row of this.grid) {
-      for(const col of row) {
-        if(col.getData()?.equals(data)) return col;
+    for (const row of this.grid) {
+      for (const col of row) {
+        if (col.getData()?.equals(data)) return col;
       }
     }
     return undefined;
@@ -205,6 +222,57 @@ export class SimpleMaze<D extends Equals<D>> implements Maze<D> {
   }
   getLeaves(): MazeCell<D>[] {
     return this.nodes.filter((n) => n.isLeaf());
+  }
+
+  private setTurnNodes() {
+    for (const cell of this.getCells()) {
+      const cells = this.getPaths()
+        .filter((p) => p.getA().equals(cell) || p.getB().equals(cell))
+        .map((p) => (p.getA().equals(cell) ? p.getB() : p.getA()));
+
+      const hasTurn =
+        cells.length === 2 &&
+        cells[0].getRow() !== cells[1].getRow() &&
+        cells[0].getColumn() !== cells[1].getColumn();
+
+      cell.setTurn(hasTurn);
+    }
+  }
+
+  private hydrateTurnPaths() {
+    const turnCells = this.getCells().filter(c => c.isTurn());
+    for (const t of turnCells) {
+      for (const tt of turnCells) {
+        if(this.hasPathBetween(t,tt)) {
+
+        }
+      }
+    }
+  }
+
+  hasPathBetween(a: MazeCell<D>, b: MazeCell<D>): boolean {
+    const sameRow = a.getRow() === b.getRow();
+    const sameColumn = a.getColumn() === b.getColumn();
+    const sameCell = sameColumn && sameRow;
+    if(!sameCell && !sameRow || !sameColumn) return false;
+
+    // TODO: finish implementing
+    if(sameRow) {
+      if(b.getRow() - a.getRow() > 0) {
+        // A is above B
+      } else {
+        // A is below B
+      }
+    }
+
+    if(sameColumn) {
+      if (b.getColumn() - a.getColumn() > 0) {
+        // A is left of B
+      } else {
+        // B is left of A
+      }
+    }
+    return false;
   }
 
   private randomize() {
