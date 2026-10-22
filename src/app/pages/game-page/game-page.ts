@@ -26,35 +26,31 @@ export class GamePage implements OnDestroy {
 
         sm.getLeaves().forEach((l) => l.setData(new Goal()));
 
+        console.log(sm.getGrid());
+        console.log(sm.getPaths());
+
+        console.log('Root: ', sm.getRoot());
+        console.log('Leaves: ', sm.getLeaves());
+
         return sm;
       }),
     ),
   );
   grid = computed(() => {
-    const graph = this.maze();
-    if (graph) return graph.getGrid();
+    const maze = this.maze();
+    if (maze) return maze.getGrid();
     else return [[]] as Array<Array<MazeCell<MazeElement>>>;
   });
   turns = computed(() => {
     const maze = this.maze();
-    if(maze) return maze.getCells().filter(c => c.isTurn());
+    if(maze) {
+      return maze.getTurnCells();
+    }
     return [] as Array<MazeCell<MazeElement>>;
   });
 
   constructor() {
-    this.setup$.subscribe((s) => {
-      console.log('Yo ----- ', s);
 
-      const sm = new SimpleMaze<MazeElement>(s.size);
-
-      sm.getRoot()?.setData(new Character());
-
-      console.log(sm.getGrid());
-      console.log(sm.getPaths());
-
-      console.log('Root: ', sm.getRoot());
-      console.log('Leaves: ', sm.getLeaves());
-    });
   }
 
   hasPathUp(cell: MazeCell<MazeElement>): boolean {
@@ -75,14 +71,9 @@ export class GamePage implements OnDestroy {
   }
 
   hasTurn(cell: MazeCell<MazeElement>) {
-    const maze = this.maze();
-    if(maze) {
-      const cells = maze.getPaths()
-        .filter((p) => p.getA().equals(cell) || p.getB().equals(cell))
-        .map((p) => (p.getA().equals(cell) ? p.getB() : p.getA()));
-
-      return cells.length === 2 && cells[0].getRow() !== cells[1].getRow() && cells[0].getColumn() !== cells[1].getColumn();
-
+    const turns = this.turns();
+    if (turns) {
+      return turns.findIndex(t => t.equals(cell)) !== -1;
     }
     return false;
   }

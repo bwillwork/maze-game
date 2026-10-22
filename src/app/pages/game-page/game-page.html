@@ -14,14 +14,10 @@
 
       @if(col.getData()?.isCharacter()) {
         YO!
-      }
-
-      @if(col.getData()?.isGoal()) {
+      } @else if(col.getData()?.isGoal()) {
         G
-      }
-
-      @if(col.isTurn()) {
-        T
+      } @else if(hasTurn(col)) {
+       T
       }
 
 

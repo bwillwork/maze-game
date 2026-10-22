@@ -22,6 +22,8 @@ export interface Cell {
 export interface Edge<D, N extends Node<D>> {
   getA(): N;
   getB(): N;
+  getOther(node: N): N;
+  has(node: N): boolean;
 }
 
 export interface Path {
@@ -32,6 +34,8 @@ export interface Path {
 export interface Equals<O> {
   equals(other: O): boolean;
 }
+
+
 
 export class MazeCell<D> implements Node<D>, Cell, Equals<MazeCell<D>> {
   private readonly row: number;
@@ -89,6 +93,20 @@ export class MazeCell<D> implements Node<D>, Cell, Equals<MazeCell<D>> {
   }
 }
 
+export class MazePath<D extends Equals<D>,C extends MazeCell<C>> implements Equals<MazePath<D,C>> {
+  private path: Array<C> = [];
+
+  isInPath(cell:C): boolean {
+    return this.path.findIndex(p => p.equals(cell)) !== -1;
+  }
+
+
+
+  equals(other: MazePath<D, C>): boolean {
+    return false;
+  }
+}
+
 export class MazeWall<D> implements Edge<D, MazeCell<D>>, Path, Equals<MazeWall<D>> {
   private path: boolean = false;
   private readonly a: MazeCell<D>;
@@ -121,17 +139,29 @@ export class MazeWall<D> implements Edge<D, MazeCell<D>>, Path, Equals<MazeWall<
   getB(): MazeCell<D> {
     return this.b;
   }
-}
 
-export interface MazeElement extends Equals<MazeElement> {
-  isCharacter(): boolean;
-  isGoal(): boolean;
-}
-
-export class Character implements MazeElement {
-  equals(other: MazeElement): boolean {
-    return this.isCharacter() === other.isCharacter() && this.isGoal() === other.isGoal();
+  getOther(node: MazeCell<D>): MazeCell<D> {
+    return (this.getA().equals(node)) ? this.getB() : this.getA();
   }
+
+  has(node: MazeCell<D>): boolean {
+    return this.getA().equals(node) || this.getB().equals(node);
+  }
+}
+
+export abstract class MazeElement implements Equals<MazeElement> {
+  abstract isCharacter(): boolean;
+  abstract isGoal(): boolean;
+  abstract isEmpty(): boolean;
+  equals(other: MazeElement): boolean {
+    let result = this.isCharacter() === other.isCharacter();
+    result = result && this.isGoal() === other.isGoal();
+    result = result && this.isEmpty() === other.isEmpty();
+    return result;
+  }
+}
+
+export class Character extends MazeElement {
   isCharacter(): boolean {
     return true;
   }
@@ -139,9 +169,13 @@ export class Character implements MazeElement {
   isGoal(): boolean {
     return false;
   }
+
+  isEmpty(): boolean {
+    return false;
+  }
 }
 
-export class Goal implements MazeElement {
+export class Goal extends MazeElement {
   isCharacter(): boolean {
     return false;
   }
@@ -150,20 +184,36 @@ export class Goal implements MazeElement {
     return true;
   }
 
-  equals(other: MazeElement): boolean {
-    return this.isCharacter() === other.isCharacter() && this.isGoal() === other.isGoal();
+  isEmpty(): boolean {
+    return false;
   }
 }
 
+export class EmptySquare extends MazeElement {
+  isCharacter(): boolean {
+    return false;
+  }
+
+  isGoal(): boolean {
+    return false;
+  }
+
+  isEmpty(): boolean {
+    return true;
+  }
+}
 
 export interface Maze<D extends Equals<D>> {
   getGrid(): Array<Array<MazeCell<D>>>;
   getPaths(): Array<MazeWall<D>>;
+  getTurnPaths(): Array<MazeWall<D>>;
   getCells(): Array<MazeCell<D>>;
+  getCell(row: number, column: number): MazeCell<D> | undefined;
+  getTurnCells(): Array<MazeCell<D>>;
   getData(row: number, column: number): D | undefined;
   find(data: D): MazeCell<D> | undefined;
 
-  placeData(data:D, row: number, column: number): void;
+  placeData(data: D, row: number, column: number): void;
   moveData(from: MazeCell<D>, to: MazeCell<D>): boolean;
 
   getFilledCells(): Array<MazeCell<D>>;
@@ -171,7 +221,6 @@ export interface Maze<D extends Equals<D>> {
 
   getRoot(): MazeCell<D> | undefined;
   getLeaves(): Array<MazeCell<D>>;
-
 }
 
 export class SimpleMaze<D extends Equals<D>> implements Maze<D> {
@@ -205,6 +254,10 @@ export class SimpleMaze<D extends Equals<D>> implements Maze<D> {
     this.setTurnNodes();
     this.hydrateTurnPaths();
 
+    console.log('+++++++++++++ ', this.turnPaths);
+  }
+  getTurnCells(): MazeCell<D>[] {
+    return this.nodes.filter((n) => n.isTurn());
   }
   getCells(): MazeCell<D>[] {
     return this.nodes;
@@ -227,52 +280,52 @@ export class SimpleMaze<D extends Equals<D>> implements Maze<D> {
   private setTurnNodes() {
     for (const cell of this.getCells()) {
       const cells = this.getPaths()
-        .filter((p) => p.getA().equals(cell) || p.getB().equals(cell))
-        .map((p) => (p.getA().equals(cell) ? p.getB() : p.getA()));
+        .filter((p) => p.has(cell))
+        .map((p) => p.getOther(cell));
 
       const hasTurn =
-        cells.length === 2 &&
-        cells[0].getRow() !== cells[1].getRow() &&
-        cells[0].getColumn() !== cells[1].getColumn();
+        cells.length > 2 ||
+        (cells.length === 2 &&
+          cells[0].getRow() !== cells[1].getRow() &&
+          cells[0].getColumn() !== cells[1].getColumn());
 
       cell.setTurn(hasTurn);
     }
   }
 
   private hydrateTurnPaths() {
-    const turnCells = this.getCells().filter(c => c.isTurn());
-    for (const t of turnCells) {
-      for (const tt of turnCells) {
-        if(this.hasPathBetween(t,tt)) {
+    const paths: Array<Array<MazeCell<D>>> = [];
+    for (let r = 0; r < this.grid.length; ++r) {
+      const paths: Array<MazeCell<D>> = [];
+      let current = this.grid[r][0];
+      for (let c = 0; c < this.grid[r].length; ++c) {
+        const next = this.grid[r][c + 1];
+        const hasPath = this.getPaths().findIndex(p => p.has(current) && p.has(next) && p.isPath()) !== -1;
 
-        }
       }
+
+
+
     }
   }
 
-  hasPathBetween(a: MazeCell<D>, b: MazeCell<D>): boolean {
-    const sameRow = a.getRow() === b.getRow();
-    const sameColumn = a.getColumn() === b.getColumn();
-    const sameCell = sameColumn && sameRow;
-    if(!sameCell && !sameRow || !sameColumn) return false;
+  private walk() {
 
-    // TODO: finish implementing
-    if(sameRow) {
-      if(b.getRow() - a.getRow() > 0) {
-        // A is above B
-      } else {
-        // A is below B
-      }
-    }
+  }
 
-    if(sameColumn) {
-      if (b.getColumn() - a.getColumn() > 0) {
-        // A is left of B
-      } else {
-        // B is left of A
-      }
-    }
-    return false;
+
+  getTurnPaths(): Array<MazeWall<D>> {
+    return this.turnPaths;
+  }
+
+  getCell(row: number, column: number): MazeCell<D> | undefined {
+    return undefined;
+  }
+
+  private getT(start: MazeCell<D>) {
+    return this.getTurnCells().filter(
+      (c) => c.getRow() === start.getRow() || c.getColumn() === start.getColumn(),
+    );
   }
 
   private randomize() {
